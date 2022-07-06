@@ -1,0 +1,205 @@
+-- Here you will find my SQL code to further clean and analyze my Cyclistic Case Study data 
+
+-- First I will make a new table to aggregate all the data into a single table
+
+CREATE TABLE `cc-study1.cyclistic_12.cyclistic12`
+(ride_id STRING, bike_type STRING, date DATE, start_time TIME, end_time TIME, start_station_name STRING, end_station_name STRING, start_lat FLOAT64, start_lng FLOAT64, end_lat FLOAT64, end_lng FLOAT64, member_type STRING, ride_length STRING, ride_length_mins INT64, day_of_week STRING);
+
+-- Next, I will begin combining all 12 individual data sets into the new table.
+
+INSERT INTO `cc-study1.cyclistic_12.cyclistic12` (ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week)
+(SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.April_22`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Aug_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Dec_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Feb_22`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Jan_22`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.July_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.June_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.March_22`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.May_22`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Nov_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Oct_21`
+UNION DISTINCT
+SELECT
+ride_id, bike_type, date, start_time, end_time, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng, member_type, ride_length, ride_length_mins, day_of_week
+FROM
+`cc-study1.cyclistic_12.Sep_21`);
+
+
+--Beauitful! Now I'll preview the new table 
+Select * 
+FROM `cc-study1.cyclistic_12.cyclistic12`
+LIMIT 50;
+
+--Looks great! I can see some further cleaning will be necesary. Time to begin inespecting. First I will count all the records
+SELECT COUNT(*)
+FROM `cc-study1.cyclistic_12.cyclistic12` ;
+
+--Nearly 6 million records! I should be able to glean some great insights from this. I'll now continue the cleaning I began in Excel
+SELECT count(ride_length)
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE start_time > end_time;
+
+--I can see there are 93,913 records where the starting time and ending time seem incorrect, we will get rid of those for accuracy sake
+DELETE
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE start_time > end_time;
+
+--93,913 Rows deleted! Next I will continue cleaning and tidying my data
+
+--Now I'll check if any lat/lng values are null, and delete those records
+SELECT COUNT(*)
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE start_lat IS null OR start_lng IS NULL OR end_lat IS NULL OR end_lng IS NULL;
+
+DELETE
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE start_lat IS null OR start_lng IS NULL OR end_lat IS NULL OR end_lng IS NULL;
+
+--Now I will double check for duplicates. ride_id is the primary key and what I will check
+SELECT COUNT(*)
+FROM `cc-study1.cyclistic_12.cyclistic12`;
+
+--Just need to check if the distinct count matches this count
+
+SELECT DISTINCT COUNT(ride_id) AS ride_id_count
+FROM `cc-study1.cyclistic_12.cyclistic12`;
+
+--These numbers match, so I can see there are no duplicates
+
+
+--I am not as concerned about null values for start_staion_name or end_station_name, as the longitute and latitude coordinates are clear. 
+--My assumption here is the long/lat is and other information is more accurate, and the station names are not as important
+
+-- I will now check the data for any spelling errors within the bike_type and member_type categories
+SELECT bike_type, member_type
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY bike_type, member_type;
+
+--No misspellings in either, wonderful
+
+-- I will preview my data once more, now that it is cleaned up
+SELECT COUNT(*)
+FROM `cc-study1.cyclistic_12.cyclistic12` ;
+
+--I have 5,816,569 now. Let's look at a preview
+
+SELECT *
+FROM `cc-study1.cyclistic_12.cyclistic12`
+LIMIT 50;
+
+--My data is now fully cleaned up and ready to analyze!
+
+--Let's look at member types
+SELECT member_type, COUNT(member_type) total
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY member_type;
+
+--We can see 2,527,710 casual ride count uses and 3,288,859 member ride count uses over last 12 months
+
+--What kinds of bikes do casual/annual members enjoy using?
+SELECT member_type, bike_type, COUNT(bike_type) AS bike_type_count
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY member_type, bike_type;
+
+--Interesting, no members use docked bikes? This inititally caused me some panic that I did something wrong with my data...
+--Very curious why members do not use docked bikes?
+
+-- Which days are most popular?
+SELECT day_of_week, COUNT(*) AS number_of_rides
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY day_of_week;
+
+-- A quick glance shows weekends are highest. Will be easier to visualize in Tableau
+
+--Now I will break it down by member type
+Select day_of_week, COUNT(*) as number_of_rides, member_type
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY day_of_week, member_type
+ORDER BY day_of_week, member_type;
+
+--This definitely needs to be visualized in Tableau to better understand
+
+-- Now to look at overall average ride time in minutes
+SELECT AVG(ride_length_mins)
+FROM `cc-study1.cyclistic_12.cyclistic12`;
+
+-- Overall is 17.17 minutes. What about for each member type?
+SELECT AVG(ride_length_mins)
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE member_type = "casual"
+;
+
+--Casual users average ride time is 23.75 minutes
+
+SELECT AVG(ride_length_mins)
+FROM `cc-study1.cyclistic_12.cyclistic12`
+WHERE member_type = "member"
+;
+
+--Member's average ride time is 12.12 minutes. About half that of casual users.
+
+--Ride duration
+SELECT member_type, bike_type, day_of_week , ROUND(AVG(ride_length_mins)) as avg_ride_length
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY member_type, bike_type, day_of_week
+ORDER BY bike_type;
+
+-- Interesting noting docked bikes have much longer averages. Wondering what the difference is between classic, docked and electric
+
+--Look at users over the 12 months, avg trip length by user type by bike by day (good for tableau visual)
+SELECT date, member_type, bike_type, day_of_week , ROUND(AVG(ride_length_mins)) as avg_ride_length
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY date, member_type, bike_type, day_of_week
+ORDER BY member_type, date;
+
+--Total users over 12 months by membership avg trip length, by month
+SELECT EXTRACT(MONTH FROM date) AS month, member_type, ROUND(AVG(ride_length_mins)) as avg_ride_length
+FROM `cc-study1.cyclistic_12.cyclistic12`
+GROUP BY month, member_type
+ORDER BY month, member_type;
+
+--I believe this part of my analysis is done. Time to save, export, and have a look in Tableau
