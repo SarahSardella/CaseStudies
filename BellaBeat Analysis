@@ -1,0 +1,228 @@
+# This is my R script for my BellaBeat Analysis
+
+
+## Install Tidyr and other needed libraries
+install.packages("tidyverse")
+
+library(tidyverse)
+
+## Set working directory
+setwd("/cloud/project")
+
+##Upload Relevant Files (Data was first cleaned in Excel)
+daily_activity <- read_csv("dailyActivity.csv")
+
+hourly_steps <- read_csv("hourlySteps.csv")
+
+daily_sleep <- read_csv("sleepDay.csv")
+
+weight_log <- read_csv("weightLog.csv")
+
+##Preview each data set
+
+glimpse(daily_activity)
+
+glimpse(hourly_steps)
+
+glimpse(daily_sleep)
+
+glimpse(weight_log)
+
+## Checking distinct values via user ID check how many participants logged
+
+n_distinct(daily_activity$Id)
+
+n_distinct(daily_sleep$Id)
+
+n_distinct(hourly_steps$Id)
+
+n_distinct((weight_log$Id))
+
+## I can see a only a small amount of users logged weight in this time.
+## And it would appear 9 participants also didn't track sleep at all, perhaps did not wear the FitBit to bed.
+
+##Checking for duplicates in the data
+
+sum(duplicated(daily_activity))
+
+sum(duplicated(daily_sleep))
+
+sum(duplicated(hourly_steps))
+
+sum(duplicated(weight_log))
+
+##Removing the duplicates in daily_sleep
+
+daily_sleep <- daily_sleep %>%
+  distinct() %>%
+  drop_na()
+
+##Now ensuring the duplicates were succesffuly deleted
+
+sum(duplicated(daily_sleep))
+
+
+##Now I will better explore our data! Pulling up daily_activity first
+head(daily_activity)
+
+##Now to take a look at some summary statistics of user behavior
+daily_activity %>% select(ActivityDate, TotalSteps, TotalDistance, Calories) %>%
+  summary()
+
+daily_sleep %>% select(TotalMinutesAsleep, TotalTimeInBed) %>%
+  summary()
+
+head(daily_sleep)
+
+head(daily_activity)
+
+glimpse(daily_sleep)
+
+glimpse(daily_activity)
+
+## Looking at the summaries, I see some variance in users. Exploring this further is not relevant to the current task. 
+## Between sleep and activity levels, the range is very large. We can break down by ID now to better understand our users
+
+##For ease of use and next steps, I'll merge daily_activity and daily_sleep
+
+daily_activity_sleep <- full_join(daily_activity, daily_sleep, 
+                                  by= c("Id", "ActivityDate" = "SleepDay"))
+
+head(daily_activity_sleep)
+
+summary(daily_activity_sleep)
+
+## Categorizing users by activity level 
+##Sedentary - Less than 5000 steps a day.
+##Lightly active - Between 5000 and 7499 steps a day.
+##Fairly active - Between 7500 and 9999 steps a day.
+##Very active - More than 10000 steps a day.
+##Classification has been made per the following article
+##https://www.livestrong.com/article/401892-what-are-sedentary-moderate-high-activity-exercise-levels/
+
+## First I will calculate users' daily averages
+daily_avg_activity <- daily_activity_sleep %>%
+  group_by(Id) %>%
+  summarize (avg_daily_steps = mean(TotalSteps), avg_daily_calories = mean(Calories))
+
+head(daily_avg_activity)
+
+## Now I'll break the population into the activity level categories specified and defined earlier, better understand the users
+
+user_category <-  daily_avg_activity %>%
+  mutate(user_category = case_when(
+    avg_daily_steps < 5000 ~ "sedentary",
+    avg_daily_steps >= 5000 & avg_daily_steps < 7499 ~ "lightly active", 
+    avg_daily_steps >= 7500 & avg_daily_steps < 9999 ~ "fairly active", 
+    avg_daily_steps >= 10000 ~ "very active"
+  ))
+
+glimpse(user_category)
+
+head(user_category)
+
+
+##testing out 
+
+user_category_percent <- user_category %>%
+  group_by(user_category) %>%
+  summarise(total = n()) %>%
+  mutate(totals = sum(total)) %>%
+  group_by(user_category) %>%
+  summarise(total_percent = total / totals) %>%
+  mutate(labels = scales::percent(total_percent))
+
+##Now to check the data frame
+
+head(user_category_percent)
+
+## I can see a pretty even distribution of user types! This is very valuable information to understand the user base.
+##Though important to note, this could be specifically sampled this way as well
+## This clearly displays how wearable tech is not for just one type of  activity level
+
+## I will look at BMI's as well
+##Healthy BMI ranges below 18.5 – underweight 
+##between 18.5 and 24.9 – healthy weight
+##between 25 and 29.9 – overweight
+##between 30 and 39.9 – obese
+##Found in https://www.nhs.uk/common-health-questions/lifestyle/what-is-the-body-mass-index-bmi/
+
+user_bmi_range <-  weight_log %>%
+  mutate(user_bmi_range = case_when(
+    BMI < 18.5 ~ "underweight",
+    BMI >= 18.5 & BMI < 25 ~ "healthy weight", 
+    BMI >= 25 & BMI < 30 ~ "overweight", 
+    BMI >= 30 ~ "obese"
+  ))
+
+
+
+##Verifying new dataframe
+glimpse(user_bmi_range)
+
+head(user_bmi_range)
+
+##Count and percentage of BMI range
+
+user_bmi_percent <- user_bmi_range %>%
+  group_by(user_bmi_range) %>%
+  summarise(total = n()) %>%
+  mutate(totals = sum(total)) %>%
+  group_by(user_bmi_range) %>%
+  summarise(total_percent = total / totals) %>%
+  mutate(labels = scales::percent(total_percent))
+
+
+##Interesting, only 1 obese user, but healthy weight and overweight nearly equal. 
+
+## I will now compile the BMI category and activity levels into a single dataframe
+
+bmi_activity <- cbind(user_bmi_percent, user_category[c("user_category")])
+
+################# many people seem to wear fitbit to bed is the biggest observation
+
+##Let's look at a visual breaking down activity level by BMI
+
+ggplot(bmi_activity, aes(fill = user_bmi_range,x=user_category)) + 
+         geom_bar(position = "dodge", stat = "count") +
+          ggtitle("Activity Category & BMI Range")
+
+## While this visual is pretty helpful, I feel a facet wrap will ensure ease of use and understanding
+
+ggplot(bmi_activity, aes(fill=user_bmi_range, x = user_bmi_range)) + 
+  geom_bar(position="dodge", stat="count") +
+  ggtitle("Activity Category & BMI Range") +
+  facet_wrap(~user_category)
+ 
+ 
+## This is much easier to visually grasp
+
+## Now to make a dataframe to observe and chart daily average activity
+       
+daily_avg_activity <- daily_activity_sleep %>%
+  group_by(Id) %>%
+  summarize (avg_daily_steps = mean(TotalSteps), avg_daily_calories = mean(Calories))
+
+head(daily_avg_activity)
+
+
+## I will preview a scatterplot, visualize any correlation between average daily steps and average calories burned
+
+ggplot(daily_avg_activity, aes(x=avg_daily_steps, y= avg_daily_calories)) +
+         geom_point(color="dark orange")
+
+##Seeing little correlation between the averages per user. Let's instead look at every data point
+
+ggplot(daily_activity, aes(x=TotalSteps, y= Calories)) +
+  geom_point(color="orange") + geom_smooth(color="dark orange") +
+  labs(title="Total Steps vs Calories Burned")
+
+## We can see a basic trend, however do note some data appearing as possible outliers
+
+##Checking sleep vs sedentary
+
+ggplot(data=daily_activity_sleep, aes(x=SedentaryMinutes, y=TotalMinutesAsleep)) + 
+  geom_point(color='orange') + geom_smooth(color="orange") +
+  labs(title="Time Asleep VS Sedentary")
+
+## Shows some correlation between more sleep and higher step counts during day
