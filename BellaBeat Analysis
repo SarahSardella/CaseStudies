@@ -179,8 +179,6 @@ user_bmi_percent <- user_bmi_range %>%
 
 bmi_activity <- cbind(user_bmi_percent, user_category[c("user_category")])
 
-################# many people seem to wear fitbit to bed is the biggest observation
-
 ##Let's look at a visual breaking down activity level by BMI
 
 ggplot(bmi_activity, aes(fill = user_bmi_range,x=user_category)) + 
